@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"unsafe"
 
@@ -105,6 +106,8 @@ var time, timeStep float64 = 0.0, 0.1
 var mainProgram uint32 = 0
 var mainUniforms [3]int32
 var defaultWidth, defaultHeight int = 960, 540
+var fragmentShaders []string
+var currentShader int = 0
 
 func loadShaderProgram(vertFilePath string, fragFilePath string, program *uint32) bool {
 	var vert uint32 = 0
@@ -123,13 +126,22 @@ func loadShaderProgram(vertFilePath string, fragFilePath string, program *uint32
 	return true
 }
 
+func updateShaderList() {
+	fragmentShaders, _ = filepath.Glob(`./shaders/*.frag`)
+	if fragmentShaders == nil {
+		fmt.Fprintln(os.Stderr, "ERROR: no fragment shaders were found.")
+		os.Exit(1)
+	}
+}
+
 func reloadShaders() {
 	gl.DeleteProgram(mainProgram)
 
 	programFailed = true
 	gl.ClearColor(1.0, 0.0, 0.0, 1.0)
 
-	if !loadShaderProgram("./shaders/main.vert", "./shaders/voronoi.frag", &mainProgram) {
+	if !loadShaderProgram("./shaders/main.vert",
+		fragmentShaders[currentShader], &mainProgram) {
 		return
 	}
 
@@ -142,25 +154,36 @@ func reloadShaders() {
 	programFailed = false
 	gl.ClearColor(0.0, 0.0, 0.0, 0.0)
 
-	fmt.Println("Successfully Reload the Shaders")
+	fmt.Println("Successfully Reload the Shaders, current fragment shader:",
+		fragmentShaders[currentShader])
 }
 
-func keyCallback(window *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+func keyCallback(window *glfw.Window, key glfw.Key, scancode int,
+	action glfw.Action, mods glfw.ModifierKey) {
 	if action == glfw.Press {
-		if key == glfw.KeyF5 {
+		switch key {
+		case glfw.KeyF5:
 			reloadShaders()
-		} else if key == glfw.KeySpace {
+		case glfw.KeySpace:
 			pause = !pause
-		} else if key == glfw.KeyQ {
-			os.Exit(0)
-		}
-
-		if pause {
-			if key == glfw.KeyLeft {
+		case glfw.KeyLeft:
+			if pause {
 				time -= timeStep
-			} else if key == glfw.KeyRight {
+			}
+		case glfw.KeyRight:
+			if pause {
 				time += timeStep
 			}
+		case glfw.KeyUp:
+			updateShaderList()
+			currentShader = (currentShader + 1) % len(fragmentShaders)
+			reloadShaders()
+		case glfw.KeyDown:
+			updateShaderList()
+			currentShader = (len(fragmentShaders) - 1 + currentShader) % len(fragmentShaders)
+			reloadShaders()
+		case glfw.KeyQ:
+			os.Exit(0)
 		}
 	}
 }
@@ -178,14 +201,15 @@ func init() {
 func main() {
 	err := glfw.Init()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ErroGetProgramInfoLogr: could not initialize GLFW, %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error: could not initialize GLFW, %s\n", err)
 		os.Exit(1)
 	}
 
 	window, err := glfw.CreateWindow(defaultWidth, defaultHeight,
 		"OpenGL", nil, nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not create GLFW window, %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error: could not create GLFW window, %s\n",
+			err)
 		glfw.Terminate()
 		os.Exit(1)
 	}
@@ -200,6 +224,7 @@ func main() {
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
+	updateShaderList()
 	reloadShaders()
 	window.SetKeyCallback(keyCallback)
 	window.SetFramebufferSizeCallback(windowSizeCallback)
@@ -212,10 +237,12 @@ func main() {
 
 		if !programFailed {
 			width, height := window.GetSize()
-			gl.Uniform2f(mainUniforms[RESOLUTION_UNIFORM], float32(width), float32(height))
+			gl.Uniform2f(mainUniforms[RESOLUTION_UNIFORM], float32(width),
+				float32(height))
 			gl.Uniform1f(mainUniforms[TIME_UNIFORM], float32(time))
 			xpos, ypos := window.GetCursorPos()
-			gl.Uniform2f(mainUniforms[MOUSE_UNIFORM], float32(xpos), float32(float64(height)-ypos))
+			gl.Uniform2f(mainUniforms[MOUSE_UNIFORM], float32(xpos),
+				float32(float64(height)-ypos))
 			gl.DrawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1)
 		}
 

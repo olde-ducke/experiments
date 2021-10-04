@@ -3,8 +3,10 @@
 Simple OpenGL template.
 Ported from C to Go using [GLFW](https://github.com/go-gl/glfw)/[OpenGL](https://github.com/go-gl/gl/tree/master/v4.6-core/gl) bindigs for golang.
 
-Original code: [opengl-template](https://github.com/tsoding/opengl-template)
+Original code: [opengl-template](https://github.com/tsoding/opengl-template).  
 OpenGL debug terminal output and extension loading are omitted.
+
+![Preview](./assets/images/preview.png)
 
 ## Controls
 
@@ -14,6 +16,7 @@ OpenGL debug terminal output and extension loading are omitted.
 | <kbd>F5</kbd>            | Reload [*.frag](./shaders/main.frag) and [main.vert](./shaders/main.vert) shaders. Red screen indicates a compilation or linking error, check the output of the program if you see it. |
 | <kbd>SPACE</kbd>         | Pause/unpause the time uniform variable in shaders                                                                                                                        |
 | <kbd>←</kbd><kbd>→</kbd> | In pause mode step back/forth in time.                                                                                                                                    |
+| <kbd>↑</kbd><kbd>↓</kbd> | Change fragment shader.                                                                                                                                                   |
 
 ## Uniforms
 
